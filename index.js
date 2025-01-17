@@ -1,28 +1,23 @@
-/**
- * @author NTKhang
- * ! The source code is written by NTKhang, please don't change the author's name everywhere. Thank you for using
- * ! Official source code: https://github.com/ntkhang03/Goat-Bot-V2
- * ! If you do not download the source code from the above address, you are using an unknown version and at risk of having your account hacked
- *
- * English:
- * ! Please do not change the below code, it is very important for the project.
- * It is my motivation to maintain and develop the project for free.
- * ! If you change it, you will be banned forever
- * Thank you for using
- *
- * Vietnamese:
- * ! Vui lòng không thay đổi mã bên dưới, nó rất quan trọng đối với dự án.
- * Nó là động lực để tôi duy trì và phát triển dự án miễn phí.
- * ! Nếu thay đổi nó, bạn sẽ bị cấm vĩnh viễn
- * Cảm ơn bạn đã sử dụng
- */
-
 const { spawn } = require("child_process");
 const log = require("./logger/log.js");
-const config = require("./config.json"); // Charger la configuration
-const login = require("fb-chat-api"); // Importer fb-chat-api
+const fs = require("fs"); // Pour vérifier les fichiers
+const login = require("fb-chat-api");
 
-const cookiesPath = "./cookies.json"; // Chemin du fichier contenant les cookies
+const configPath = "./config.dev.json";
+const cookiesPath = "./account.dev.json";
+
+// Valider les fichiers requis
+if (!fs.existsSync(configPath)) {
+  console.error("Fichier config.json introuvable !");
+  process.exit(1);
+}
+
+if (!fs.existsSync(cookiesPath)) {
+  console.error("Fichier cookies.json introuvable !");
+  process.exit(1);
+}
+
+const config = require(configPath);
 
 function startProject() {
   const child = spawn("node", ["Goat.js"], {
@@ -40,20 +35,21 @@ function startProject() {
 }
 
 function notifyCreator(apiInstance) {
-  const creatorId = config.adminBot[0]; // Récupère l'ID du créateur
+  const creatorId = config.adminBot?.[0]; // Vérifier l'existence de adminBot
   const message = "Le bot est maintenant en ligne !";
 
-  if (creatorId) {
-    apiInstance.sendMessage(message, creatorId, (err) => {
-      if (err) {
-        console.error("Erreur lors de l'envoi du message au créateur :", err);
-      } else {
-        console.log("Notification envoyée au créateur.");
-      }
-    });
-  } else {
-    console.error("ID du créateur introuvable dans la configuration.");
+  if (!creatorId) {
+    console.error("ID du créateur introuvable dans config.json.");
+    return;
   }
+
+  apiInstance.sendMessage(message, creatorId, (err) => {
+    if (err) {
+      console.error("Erreur lors de l'envoi du message au créateur :", err);
+    } else {
+      console.log("Notification envoyée au créateur.");
+    }
+  });
 }
 
 function initializeBot() {
@@ -76,5 +72,9 @@ function initializeBot() {
 }
 
 // Démarrer le projet et le bot
-startProject();
-initializeBot();
+try {
+  startProject();
+  initializeBot();
+} catch (e) {
+  console.error("Une erreur inattendue est survenue :", e);
+}
