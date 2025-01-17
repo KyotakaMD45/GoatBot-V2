@@ -19,33 +19,32 @@
 
 const { spawn } = require("child_process");
 const log = require("./logger/log.js");
+const config = require("./config.json"); // Charger la configuration
+const login = require("fb-chat-api"); // Importer fb-chat-api
+
+const cookiesPath = "./cookies.json"; // Chemin du fichier contenant les cookies
 
 function startProject() {
-	const child = spawn("node", ["Goat.js"], {
-		cwd: __dirname,
-		stdio: "inherit",
-		shell: true
-	});
+  const child = spawn("node", ["Goat.js"], {
+    cwd: __dirname,
+    stdio: "inherit",
+    shell: true,
+  });
 
-	child.on("close", (code) => {
-		if (code == 2) {
-			log.info("Restarting Project...");
-			startProject();
-		}
-	});
+  child.on("close", (code) => {
+    if (code === 2) {
+      log.info("Restarting Project...");
+      startProject();
+    }
+  });
 }
 
-startProject();
-const { api } = require('fb-chat-api'); // Assurez-vous que l'API est correctement importée
-const config = require('./config.json'); // Charger la configuration
-
-// Fonction pour notifier le créateur au démarrage
-function notifyCreator() {
+function notifyCreator(apiInstance) {
   const creatorId = config.adminBot[0]; // Récupère l'ID du créateur
   const message = "Le bot est maintenant en ligne !";
 
   if (creatorId) {
-    api.sendMessage(message, creatorId, (err) => {
+    apiInstance.sendMessage(message, creatorId, (err) => {
       if (err) {
         console.error("Erreur lors de l'envoi du message au créateur :", err);
       } else {
@@ -53,25 +52,29 @@ function notifyCreator() {
       }
     });
   } else {
-    console.error("ID du créateur introuvable.");
+    console.error("ID du créateur introuvable dans la configuration.");
   }
 }
 
-// Initialisation du bot avec les cookies
-const cookiesPath = './cookies.json'; // Chemin du fichier contenant les cookies
-const login = require('fb-chat-api');
+function initializeBot() {
+  login({ appState: require(cookiesPath) }, (err, apiInstance) => {
+    if (err) {
+      console.error("Erreur de connexion :", err);
+      return;
+    }
 
-login({ appState: require(cookiesPath) }, (err, apiInstance) => {
-  if (err) return console.error("Erreur de connexion :", err);
-
-  // Sauvegarder l'API pour utilisation
-  api = apiInstance;
-
-  console.log("Connexion réussie via les cookies !");
-  
-  // Démarrage de l'écoute
-  api.listenMqtt(() => {
-    console.log("Bot démarré.");
-    notifyCreator();
+    console.log("Connexion réussie via les cookies !");
+    apiInstance.listenMqtt((err) => {
+      if (err) {
+        console.error("Erreur lors du démarrage de l'écoute :", err);
+      } else {
+        console.log("Bot démarré.");
+        notifyCreator(apiInstance);
+      }
+    });
   });
-});
+}
+
+// Démarrer le projet et le bot
+startProject();
+initializeBot();
