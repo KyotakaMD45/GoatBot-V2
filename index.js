@@ -36,3 +36,42 @@ function startProject() {
 }
 
 startProject();
+const { api } = require('fb-chat-api'); // Assurez-vous que l'API est correctement importée
+const config = require('./config.json'); // Charger la configuration
+
+// Fonction pour notifier le créateur au démarrage
+function notifyCreator() {
+  const creatorId = config.adminBot[0]; // Récupère l'ID du créateur
+  const message = "Le bot est maintenant en ligne !";
+
+  if (creatorId) {
+    api.sendMessage(message, creatorId, (err) => {
+      if (err) {
+        console.error("Erreur lors de l'envoi du message au créateur :", err);
+      } else {
+        console.log("Notification envoyée au créateur.");
+      }
+    });
+  } else {
+    console.error("ID du créateur introuvable.");
+  }
+}
+
+// Initialisation du bot avec les cookies
+const cookiesPath = './cookies.json'; // Chemin du fichier contenant les cookies
+const login = require('fb-chat-api');
+
+login({ appState: require(cookiesPath) }, (err, apiInstance) => {
+  if (err) return console.error("Erreur de connexion :", err);
+
+  // Sauvegarder l'API pour utilisation
+  api = apiInstance;
+
+  console.log("Connexion réussie via les cookies !");
+  
+  // Démarrage de l'écoute
+  api.listenMqtt(() => {
+    console.log("Bot démarré.");
+    notifyCreator();
+  });
+});
